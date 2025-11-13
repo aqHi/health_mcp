@@ -18,4 +18,4 @@ chmod +x curl_tests.sh   # 首次下载后若未赋予执行权限
 BASE_URL="http://127.0.0.1:8000/api" ./curl_tests.sh
 ```
 
-> 依赖：需要本地安装 `curl` 与 `jq`。
+> 依赖：需要本地安装 `curl`。若未安装 `jq`，脚本会自动使用 `python3` 处理 JSON。
