@@ -1,0 +1,47 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: example
+      MYSQL_DB: health_mcp
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      APP_PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: health_mcp
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+
+volumes:
+  mysql-data:
+  redis-data:
