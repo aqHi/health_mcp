@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     api_key: Optional[str] = None
     log_level: str = "INFO"
 
+    admin_username: Optional[str] = None
+    admin_password: Optional[str] = None
+    default_admin_username: str = "admin"
+    session_secret_key: Optional[str] = None
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

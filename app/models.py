@@ -60,3 +60,14 @@ class HealthMetric(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class AdminUser(Base):
+    __tablename__ = "admin_users"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    username = Column(String(64), nullable=False, unique=True, index=True)
+    password_hash = Column(String(128), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

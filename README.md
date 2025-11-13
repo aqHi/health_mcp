@@ -10,6 +10,7 @@
 - `health_delete_record`：删除（软删除）指定记录。
 - `health_list_metric_types`：返回内置指标字典。
 - 提供 `/api` 下的 RESTful 接口，方便本地调试。
+- 自带 `/admin` Web 后台，可视化查看、筛选与删除健康指标数据。
 
 ## 快速开始
 
@@ -20,6 +21,8 @@ docker-compose up --build
 ```
 
 容器会在启动阶段自动等待 MySQL 就绪并执行数据表初始化；服务启动后，REST API 与 MCP Endpoint 均监听在 `http://localhost:8000`。
+
+启动完成后可访问 `http://localhost:8000/admin` 打开管理后台。若未通过环境变量提供管理员账号，将自动生成随机凭据写入数据库并在日志中打印，首次登录后请及时修改密码。
 
 如需在网络较慢或数据库初始化时间较长的环境中调整等待策略，可通过设置环境变量 `DB_INIT_MAX_ATTEMPTS`（默认 30 次）与 `DB_INIT_DELAY_SECONDS`（默认每次间隔 2 秒）来控制入口脚本的重试次数与间隔。
 
@@ -97,6 +100,10 @@ MCP Endpoint: `POST /mcp/tools`
 | `REDIS_PORT` | Redis 端口 | `6379` |
 | `APP_PORT` | 服务监听端口 | `8000` |
 | `API_KEY` | 可选的接口访问密钥 | 空 |
+| `ADMIN_USERNAME` | （可选）后台管理员用户名 | 空 |
+| `ADMIN_PASSWORD` | （可选）后台管理员密码 | 空 |
+| `DEFAULT_ADMIN_USERNAME` | 未显式配置时默认创建的管理员用户名 | `admin` |
+| `SESSION_SECRET_KEY` | 会话加密密钥，未提供时自动随机生成 | 空 |
 | `DB_INIT_MAX_ATTEMPTS` | 入口脚本等待数据库的最大重试次数 | `30` |
 | `DB_INIT_DELAY_SECONDS` | 每次重试之间的等待秒数 | `2` |
 
@@ -105,6 +112,8 @@ MCP Endpoint: `POST /mcp/tools`
 ```
 app/
   ├── api.py              # REST API 路由
+  ├── admin_router.py     # 管理后台路由
+  ├── admin_service.py    # 管理员账号与仪表盘逻辑
   ├── catalog.py          # 指标字典
   ├── config.py           # 配置
   ├── db.py               # 数据库连接
@@ -113,8 +122,11 @@ app/
   ├── mcp.py              # MCP JSON-RPC 路由
   ├── models.py           # SQLAlchemy 实体
   ├── repositories.py     # 数据访问层
+  ├── security.py         # 密码哈希与校验工具
   ├── schemas.py          # Pydantic Schema
   └── services.py         # 业务逻辑
+
+app/templates/            # 管理后台 HTML 模板
 
 docker-entrypoint.sh      # 容器入口脚本，负责等待数据库并初始化表结构
 ```
