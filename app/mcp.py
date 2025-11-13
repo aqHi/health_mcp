@@ -8,7 +8,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import EventSourceResponse
+from starlette.responses import EventSourceResponse
 from sqlalchemy.orm import Session
 
 from .db import get_db
