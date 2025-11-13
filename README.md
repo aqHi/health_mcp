@@ -21,6 +21,8 @@ docker-compose up --build
 
 容器会在启动阶段自动等待 MySQL 就绪并执行数据表初始化；服务启动后，REST API 与 MCP Endpoint 均监听在 `http://localhost:8000`。
 
+如需在网络较慢或数据库初始化时间较长的环境中调整等待策略，可通过设置环境变量 `DB_INIT_MAX_ATTEMPTS`（默认 30 次）与 `DB_INIT_DELAY_SECONDS`（默认每次间隔 2 秒）来控制入口脚本的重试次数与间隔。
+
 #### Docker Hub 镜像加速配置
 
 如需配置 Docker Hub 国内镜像源，可在宿主机的 `/etc/docker/daemon.json` 中加入如下内容，并重启 Docker 服务：
@@ -95,6 +97,8 @@ MCP Endpoint: `POST /mcp/tools`
 | `REDIS_PORT` | Redis 端口 | `6379` |
 | `APP_PORT` | 服务监听端口 | `8000` |
 | `API_KEY` | 可选的接口访问密钥 | 空 |
+| `DB_INIT_MAX_ATTEMPTS` | 入口脚本等待数据库的最大重试次数 | `30` |
+| `DB_INIT_DELAY_SECONDS` | 每次重试之间的等待秒数 | `2` |
 
 ## 目录结构
 
