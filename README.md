@@ -27,13 +27,21 @@ docker-compose up --build
 
 ```json
 {
-  "registry-mirrors": [
+ "registry-mirrors": [
     "https://docker.m.daocloud.io"
   ]
 }
 ```
 
 该镜像由 DaoCloud 提供，可替代腾讯云镜像以提升拉取速度。
+
+#### Python 包索引加速
+
+镜像构建阶段会默认使用清华大学的 PyPI 镜像源（`https://pypi.tuna.tsinghua.edu.cn/simple`），确保诸如 `uvicorn` 等依赖可在国内环境顺利安装。如需在宿主机或虚拟环境中手动安装依赖，也可执行：
+
+```bash
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
 
 ### 本地运行
 
