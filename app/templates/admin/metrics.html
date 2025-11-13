@@ -1,0 +1,77 @@
+{% extends "admin/base.html" %}
+{% block title %}指标数据{% endblock %}
+{% block content %}
+  <h2>指标数据管理</h2>
+  <form method="get" class="filter-group">
+    <label>用户ID
+      <input type="text" name="user_id" value="{{ user_id }}" placeholder="可选" />
+    </label>
+    <label>类型编码
+      <input type="text" name="type_code" value="{{ type_code }}" placeholder="可选" />
+    </label>
+    <label>每页数量
+      <input type="number" min="1" max="100" name="page_size" value="{{ page_size }}" />
+    </label>
+    <input type="hidden" name="page" value="1" />
+    <button class="btn btn-primary" type="submit">筛选</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>记录ID</th>
+        <th>用户</th>
+        <th>类型</th>
+        <th>数值</th>
+        <th>采集时间</th>
+        <th>更新时间</th>
+        <th>来源</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for metric in metrics %}
+        <tr>
+          <td>{{ metric.id }}</td>
+          <td>{{ metric.user_id }}</td>
+          <td>{{ metric.type_code }}</td>
+          <td>
+            {% if metric.value_number is not none %}
+              {{ metric.value_number }}
+            {% elif metric.value_text %}
+              {{ metric.value_text }}
+            {% elif metric.value_json %}
+              {{ metric.value_json | tojson }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>{{ metric.recorded_at }}</td>
+          <td>{{ metric.updated_at }}</td>
+          <td>{{ metric.source }}</td>
+          <td>
+            <form class="inline" method="post" action="/admin/metrics/{{ metric.id }}/delete" onsubmit="return confirm('确认删除该记录吗？');">
+              <button class="btn btn-danger" type="submit">删除</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="8" style="text-align:center;color:#6b7280;">暂无数据</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div style="margin-top:1rem;display:flex;align-items:center;gap:1rem;">
+    <div>共 {{ total }} 条记录</div>
+    <div>
+      {% if page > 1 %}
+        <a class="btn btn-primary" href="?page={{ page - 1 }}&page_size={{ page_size }}&user_id={{ user_id }}&type_code={{ type_code }}">上一页</a>
+      {% endif %}
+      {% if page * page_size < total %}
+        <a class="btn btn-primary" href="?page={{ page + 1 }}&page_size={{ page_size }}&user_id={{ user_id }}&type_code={{ type_code }}">下一页</a>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

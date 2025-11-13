@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% block title %}管理员登录{% endblock %}
+{% block content %}
+  <h2>管理员登录</h2>
+  {% if error %}
+    <div style="background:#fee2e2;color:#991b1b;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1rem;">
+      {{ error }}
+    </div>
+  {% endif %}
+  <form method="post" action="/admin/login" style="max-width:360px;">
+    <div style="margin-bottom:1rem;">
+      <label for="username" style="display:block;font-weight:600;margin-bottom:0.25rem;">用户名</label>
+      <input id="username" name="username" type="text" required style="width:100%;padding:0.5rem;border-radius:6px;border:1px solid #d1d5db;" />
+    </div>
+    <div style="margin-bottom:1rem;">
+      <label for="password" style="display:block;font-weight:600;margin-bottom:0.25rem;">密码</label>
+      <input id="password" name="password" type="password" required style="width:100%;padding:0.5rem;border-radius:6px;border:1px solid #d1d5db;" />
+    </div>
+    <button class="btn btn-primary" type="submit">登录</button>
+  </form>
+{% endblock %}
