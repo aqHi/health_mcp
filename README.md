@@ -21,6 +21,20 @@ docker-compose up --build
 
 容器会在启动阶段自动等待 MySQL 就绪并执行数据表初始化；服务启动后，REST API 与 MCP Endpoint 均监听在 `http://localhost:8000`。
 
+#### Docker Hub 镜像加速配置
+
+如需配置 Docker Hub 国内镜像源，可在宿主机的 `/etc/docker/daemon.json` 中加入如下内容，并重启 Docker 服务：
+
+```json
+{
+  "registry-mirrors": [
+    "https://docker.m.daocloud.io"
+  ]
+}
+```
+
+该镜像由 DaoCloud 提供，可替代腾讯云镜像以提升拉取速度。
+
 ### 本地运行
 
 ```bash
