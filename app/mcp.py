@@ -8,7 +8,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.encoders import jsonable_encoder
-from starlette.responses import EventSourceResponse
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from .db import get_db
@@ -141,21 +141,18 @@ async def handle_json_rpc(
 
 
 @router.get("/stream")
-async def stream_events(request: Request) -> EventSourceResponse:
+async def stream_events(request: Request) -> StreamingResponse:
     queue = event_manager.subscribe()
 
     async def event_generator():
         try:
-            yield {
-                "event": "ready",
-                "data": json.dumps(
-                    {
-                        "timestamp": _now_iso(),
-                        "message": "MCP SSE stream established",
-                    },
-                    ensure_ascii=False,
-                ),
-            }
+            yield _format_sse(
+                "ready",
+                {
+                    "timestamp": _now_iso(),
+                    "message": "MCP SSE stream established",
+                },
+            )
             while True:
                 if await request.is_disconnected():
                     break
@@ -164,18 +161,18 @@ async def stream_events(request: Request) -> EventSourceResponse:
                         queue.get(), timeout=HEARTBEAT_SECONDS
                     )
                 except asyncio.TimeoutError:
-                    yield {
-                        "event": "heartbeat",
-                        "data": json.dumps(
-                            {"timestamp": _now_iso()}, ensure_ascii=False
-                        ),
-                    }
+                    yield _format_sse("heartbeat", {"timestamp": _now_iso()})
                     continue
-                yield {"event": event, "data": payload}
+                yield _format_sse(event, json.loads(payload))
         finally:
             event_manager.unsubscribe(queue)
 
-    return EventSourceResponse(event_generator())
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+def _format_sse(event: str, data: Dict[str, Any]) -> str:
+    payload = json.dumps(data, ensure_ascii=False)
+    return f"event: {event}\ndata: {payload}\n\n"
 
 
 def _invoke_tool(name: str, arguments: Dict[str, Any], service: MetricService) -> Dict[str, Any]:
