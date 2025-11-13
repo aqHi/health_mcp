@@ -26,6 +26,35 @@ docker-compose up --build
 
 如需在网络较慢或数据库初始化时间较长的环境中调整等待策略，可通过设置环境变量 `DB_INIT_MAX_ATTEMPTS`（默认 30 次）与 `DB_INIT_DELAY_SECONDS`（默认每次间隔 2 秒）来控制入口脚本的重试次数与间隔。
 
+#### Nginx 反向代理示例（health.aqhi.net）
+
+若需要通过自定义域名对外暴露 HTTP 与 MCP（`/mcp/tools`）接口，可参考 `deploy/nginx.health.conf` 的配置，将流量统一转发至本服务：
+
+```nginx
+upstream health_mcp_backend {
+    server 127.0.0.1:8000;
+}
+
+server {
+    listen 80;
+    server_name health.aqhi.net;
+
+    client_max_body_size 16m;
+
+    location / {
+        proxy_pass http://health_mcp_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+    }
+}
+```
+
+将该配置放入 Nginx 的 `conf.d` 目录并重新加载服务，即可通过 `http://health.aqhi.net` 访问 REST API、MCP Endpoint 与管理后台。若部署在其他主机或端口上，只需将 `upstream` 中的地址替换为对应的内网地址与端口。
+
 #### Docker Hub 镜像加速配置
 
 如需配置 Docker Hub 国内镜像源，可在宿主机的 `/etc/docker/daemon.json` 中加入如下内容，并重启 Docker 服务：
