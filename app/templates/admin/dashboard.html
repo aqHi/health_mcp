@@ -1,0 +1,81 @@
+{% extends "admin/base.html" %}
+{% block title %}仪表盘{% endblock %}
+{% block content %}
+  <h2>数据概览</h2>
+  <div class="card-grid">
+    <div class="card">
+      <h3>指标总数</h3>
+      <p style="font-size:2rem;font-weight:700;">{{ stats.total_metrics }}</p>
+    </div>
+    <div class="card">
+      <h3>用户总数</h3>
+      <p style="font-size:2rem;font-weight:700;">{{ stats.total_users }}</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem;">
+    <h3>各类型指标数量</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>类型编码</th>
+          <th>数量</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for type_code, count in stats.type_counts %}
+          <tr>
+            <td>{{ type_code }}</td>
+            <td>{{ count }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="2" style="text-align:center;color:#6b7280;">暂无数据</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem;">
+    <h3>最近入库记录</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>记录ID</th>
+          <th>用户</th>
+          <th>类型</th>
+          <th>值</th>
+          <th>采集时间</th>
+          <th>来源</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for metric in recent_metrics %}
+          <tr>
+            <td>{{ metric.id }}</td>
+            <td>{{ metric.user_id }}</td>
+            <td>{{ metric.type_code }}</td>
+            <td>
+              {% if metric.value_number is not none %}
+                {{ metric.value_number }}
+              {% elif metric.value_text %}
+                {{ metric.value_text }}
+              {% elif metric.value_json %}
+                {{ metric.value_json | tojson }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ metric.recorded_at }}</td>
+            <td>{{ metric.source }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align:center;color:#6b7280;">暂无数据</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
