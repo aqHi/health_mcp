@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import asyncio
+import json
+from datetime import datetime, timezone
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import EventSourceResponse
 from sqlalchemy.orm import Session
 
 from .db import get_db
+from .events import event_manager
 from .schemas import MCPRequest, MCPResponse
 from .services import MetricService
 
@@ -22,15 +29,35 @@ TOOLS = {
 }
 
 
+HEARTBEAT_SECONDS = 15
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 @router.post("/tools", response_model=MCPResponse)
-def handle_json_rpc(request: MCPRequest, session: Session = Depends(get_db)) -> Dict[str, Any]:
+async def handle_json_rpc(
+    request: MCPRequest, session: Session = Depends(get_db)
+) -> Dict[str, Any]:
     if request.jsonrpc != "2.0":
+        await event_manager.publish(
+            "mcp.error",
+            jsonable_encoder(
+                {
+                    "id": request.id,
+                    "method": request.method,
+                    "error": "Unsupported JSON-RPC version",
+                    "timestamp": _now_iso(),
+                }
+            ),
+        )
         raise HTTPException(status_code=400, detail="Unsupported JSON-RPC version")
 
     service = MetricService(session)
 
     if request.method == "tools.list":
-        return MCPResponse(
+        response = MCPResponse(
             id=request.id,
             result={
                 "tools": [
@@ -39,16 +66,116 @@ def handle_json_rpc(request: MCPRequest, session: Session = Depends(get_db)) -> 
                 ]
             },
         )
+        await event_manager.publish(
+            "mcp.tools.list",
+            jsonable_encoder(
+                {
+                    "id": request.id,
+                    "tool_names": list(TOOLS.keys()),
+                    "timestamp": _now_iso(),
+                }
+            ),
+        )
+        return response
     if request.method == "tools.call":
         params = request.params or {}
         name = params.get("name")
         arguments = params.get("arguments", {})
         if name not in TOOLS:
+            await event_manager.publish(
+                "mcp.tools.error",
+                jsonable_encoder(
+                    {
+                        "id": request.id,
+                        "method": request.method,
+                        "tool": name,
+                        "error": "Unknown tool",
+                        "timestamp": _now_iso(),
+                    }
+                ),
+            )
             raise HTTPException(status_code=404, detail=f"Unknown tool: {name}")
-        result = _invoke_tool(name, arguments, service)
+        try:
+            result = await run_in_threadpool(_invoke_tool, name, arguments, service)
+        except HTTPException as exc:
+            await event_manager.publish(
+                "mcp.tools.error",
+                jsonable_encoder(
+                    {
+                        "id": request.id,
+                        "method": request.method,
+                        "tool": name,
+                        "error": exc.detail,
+                        "status": exc.status_code,
+                        "timestamp": _now_iso(),
+                    }
+                ),
+            )
+            raise
+        await event_manager.publish(
+            "mcp.tools.call",
+            jsonable_encoder(
+                {
+                    "id": request.id,
+                    "tool": name,
+                    "arguments": arguments,
+                    "result": result,
+                    "timestamp": _now_iso(),
+                }
+            ),
+        )
         return MCPResponse(id=request.id, result=result)
 
+    await event_manager.publish(
+        "mcp.error",
+        jsonable_encoder(
+            {
+                "id": request.id,
+                "method": request.method,
+                "error": "Unknown method",
+                "timestamp": _now_iso(),
+            }
+        ),
+    )
     raise HTTPException(status_code=404, detail=f"Unknown method: {request.method}")
+
+
+@router.get("/stream")
+async def stream_events(request: Request) -> EventSourceResponse:
+    queue = event_manager.subscribe()
+
+    async def event_generator():
+        try:
+            yield {
+                "event": "ready",
+                "data": json.dumps(
+                    {
+                        "timestamp": _now_iso(),
+                        "message": "MCP SSE stream established",
+                    },
+                    ensure_ascii=False,
+                ),
+            }
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    event, payload = await asyncio.wait_for(
+                        queue.get(), timeout=HEARTBEAT_SECONDS
+                    )
+                except asyncio.TimeoutError:
+                    yield {
+                        "event": "heartbeat",
+                        "data": json.dumps(
+                            {"timestamp": _now_iso()}, ensure_ascii=False
+                        ),
+                    }
+                    continue
+                yield {"event": event, "data": payload}
+        finally:
+            event_manager.unsubscribe(queue)
+
+    return EventSourceResponse(event_generator())
 
 
 def _invoke_tool(name: str, arguments: Dict[str, Any], service: MetricService) -> Dict[str, Any]:

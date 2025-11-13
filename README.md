@@ -95,6 +95,12 @@ MCP Endpoint: `POST /mcp/tools`
 - `tools.list`：返回可用工具列表
 - `tools.call`：按照 `name` + `arguments` 调用具体工具
 
+### SSE 调试通道
+
+- SSE Endpoint：`GET /mcp/stream`
+- 首次连接会收到 `ready` 事件，之后每 15 秒发送一次 `heartbeat` 维持长连接。
+- 当触发 `tools.list`、`tools.call` 或校验失败时，会推送 `mcp.tools.*` / `mcp.error` 事件，方便在 [MCP Inspector](https://modelcontextprotocol.io/inspector) 中实时查看请求与结果。
+
 请求示例：
 
 ```json

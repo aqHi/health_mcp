@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import secrets
 
@@ -9,6 +10,7 @@ from .admin_service import ensure_default_admin
 from .api import router as api_router
 from .config import get_settings
 from .db import SessionLocal, engine
+from .events import event_manager
 from .mcp import router as mcp_router
 from .models import Base
 
@@ -26,7 +28,8 @@ logger = logging.getLogger(__name__)
 
 
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
+    event_manager.set_loop(asyncio.get_running_loop())
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as session:
         ensure_default_admin(session, logger=logger)
